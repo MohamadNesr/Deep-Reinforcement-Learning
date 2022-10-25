@@ -1,8 +1,9 @@
 import collections
-import numpy as np
 import random
 
-DQNint = collections.namedtuple('DQNint', ['state','action','nextState', 'reward','end'])
+# Nos tuples d'interactions
+DQNInt = collections.namedtuple('DQNInt', ['state', 'action', 'nextState', 'reward', 'end'])
+
 
 class ExperienceReplay:
     def __init__(self):
@@ -10,9 +11,13 @@ class ExperienceReplay:
         self.buffer = []
 
     def save(self, state, action, nextState, reward, end):
+        # si la taille du buffer est superieure a la taille maximale
         if len(self.buffer) > self.size:
+            # on enleve la premiere interaction
             self.buffer.pop(0)
-        self.buffer.append(DQNint(state, action, nextState, reward, end))
+        # on ajoute la nouvelle interaction
+        self.buffer.append(DQNInt(state, action, nextState, reward, end))
 
     def randomPick(self, size):
+        # on tir aleatoirement des interactions distinctes
         return random.sample(self.buffer, size)
