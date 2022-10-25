@@ -2,7 +2,7 @@ import collections
 import random
 
 # Nos tuples d'interactions
-DQNInt = collections.namedtuple('DQNInt', ['state', 'action', 'nextState', 'reward', 'end'])
+DQNInt = collections.namedtuple('DQNInt', ('state', 'action', 'nextState', 'reward', 'end'))
 
 
 class ExperienceReplay:
