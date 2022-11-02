@@ -42,8 +42,8 @@ def randomGame():
 
 def randomQGame():
     eta = 0.01
-    batch_size = 64
-    episodes = 100
+    batch_size = 128
+    episodes = 300
     agent = Agent(env.action_space, env.observation_space, eta)
     experience = ExperienceReplay()
 
@@ -57,7 +57,7 @@ def randomQGame():
         reward_cumul = 0
         interactionsEp = 0
         while True:
-            action = agent.act(observation, 0.9, 0.05, 200)
+            action = agent.act(observation)
             next_observation, reward, terminated, truncated, info = env.step(action)
             reward_cumul += reward
             interactionsEp += 1
@@ -69,10 +69,8 @@ def randomQGame():
             observation = next_observation
             if terminated or truncated:
                 rewardEp = numpy.append(rewardEp, reward_cumul)
-               # eps = numpy.append(eps, agent.epsilon)
                 epcount += 1
                 eps = numpy.append(eps, epcount)
-
                 interactions = numpy.append(interactions, interactionsEp)
                 print("Episode {} : reward = {}, epsilon = {}, interactions = {}".format(episode, reward_cumul, agent.epsilon, interactionsEp))
                 break
@@ -100,7 +98,7 @@ def testGame():
     reward_cumul = 0
     for _ in range(100):
         while True:
-            action = agent.act(observation, 0.9, 0.05, 200)
+            action = agent.act(observation)
             next_observation, reward, terminated, truncated, info = env.step(action)
             reward_cumul += reward
 
