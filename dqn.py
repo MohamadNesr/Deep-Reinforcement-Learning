@@ -11,7 +11,6 @@ class DQN(torch.nn.Module):
                                           torch.nn.ReLU(),
                                           torch.nn.Linear(32, output_size) )
         self.loss = torch.nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.01)
         self.param = torch.nn.ModuleList(self.model.children())
 
     def forward(self, x):
