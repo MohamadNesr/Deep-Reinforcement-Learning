@@ -6,7 +6,9 @@ import random
 import torch
 
 EPS_DECAY = 0.995
-EPS_MIN = 0.01
+EPS_MIN = 0.001
+ETA_MIN = 0.0000001
+ETA_DECAY = 0.175
 
 class Agent:
     def __init__(self, act_space, obs_space, eta):
@@ -14,13 +16,13 @@ class Agent:
         self.act_space = act_space
         self.obs_space = obs_space
         self.dqn = DQN(obs_space.shape[0], act_space.n)
-        self.optimizer = torch.optim.Adam(self.dqn.model.parameters(), lr=0.01, weight_decay=0.01)
+        self.optimizer = torch.optim.Adam(self.dqn.model.parameters(), lr=self.eta, weight_decay=0.01)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.epsilon = 1.0
         self.steps = 0
         self.gamma = 0.99
         self.target_net = copy.deepcopy(self.dqn)
-
+        self.loss = None
         # evaluate the network
         self.dqn.model.eval()
         self.target_net.model.eval()
@@ -73,13 +75,29 @@ class Agent:
 
         # compute the loss
         loss = loss_fn(q_values, targets)
-
+        self.loss = loss.item()
         # optimize the network and update weights
         self.optimizer.zero_grad()
         loss.backward()
         for param in self.dqn.model.parameters():
             param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
+        self.soft_update(0.01)
+        #if self.steps % 40 == 0:
+        #self.hard_update()
+        #self.Eta()
 
-        if self.steps % 40 == 0:
-            self.target_net.load_state_dict(self.dqn.state_dict())
+    def etaDecay(self):
+        self.eta = max(self.eta * ETA_DECAY, ETA_MIN)
+        return self.eta
+
+    def etaIncrease(self):
+        self.eta = max(self.eta * (1 + ETA_DECAY), ETA_MIN)
+        return self.eta
+
+    def soft_update(self, tau):
+        for target_param, param in zip(self.target_net.parameters(), self.dqn.parameters()):
+            target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
+
+    def hard_update(self):
+        self.target_net.load_state_dict(self.dqn.state_dict())
