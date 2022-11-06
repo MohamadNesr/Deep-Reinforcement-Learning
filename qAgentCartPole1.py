@@ -85,15 +85,6 @@ class Agent:
         self.soft_update(0.01)
         #if self.steps % 40 == 0:
         #self.hard_update()
-        #self.Eta()
-
-    def etaDecay(self):
-        self.eta = max(self.eta * ETA_DECAY, ETA_MIN)
-        return self.eta
-
-    def etaIncrease(self):
-        self.eta = max(self.eta * (1 + ETA_DECAY), ETA_MIN)
-        return self.eta
 
     def soft_update(self, tau):
         for target_param, param in zip(self.target_net.parameters(), self.dqn.parameters()):

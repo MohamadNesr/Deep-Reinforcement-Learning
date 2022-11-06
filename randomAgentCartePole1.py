@@ -43,13 +43,12 @@ def randomGame():
 def randomQGame():
     eta = 0.01
     batch_size = 128
-    episodes = 200
+    episodes = 300
     agent = Agent(env.action_space, env.observation_space, eta)
     experience = ExperienceReplay()
 
     rewardEp = numpy.array([])
     eps = numpy.array([])
-    lr = numpy.array([])
     epcount = 0
     interactions = numpy.array([])
 
@@ -63,23 +62,19 @@ def randomQGame():
             reward_cumul += reward
             interactionsEp += 1
             experience.save(observation, action, next_observation, reward, terminated)
-            if (batch_size <= len(experience.buffer)):
-                batch = experience.randomPick(batch_size)
-                agent.learn(batch)
-
             observation = next_observation
+
             if terminated or truncated:
                 rewardEp = numpy.append(rewardEp, reward_cumul)
                 epcount += 1
                 eps = numpy.append(eps, epcount)
-                lr = numpy.append(lr, agent.eta)
-                if reward_cumul > 400:
-                    eta = agent.etaDecay()
-                elif reward_cumul < 300 and agent.eta < 0.01:
-                    eta = agent.etaIncrease()
                 interactions = numpy.append(interactions, interactionsEp)
                 print("Episode {} : reward = {}, epsilon = {}, eta = {}, loss = {}".format(episode, reward_cumul, agent.epsilon, agent.eta, agent.loss))
                 break
+
+            if (batch_size <= len(experience.buffer)):
+                batch = experience.randomPick(batch_size)
+                agent.learn(batch)
 
     env.close()
     torch.save(agent.dqn.model.state_dict(), "model.pth")
@@ -88,10 +83,6 @@ def randomQGame():
     plt.title("ETA = {}".format(eta) + " batch_size = {}".format(batch_size))
     plt.ylabel("rewards")
     plt.xlabel("episodes")
-    plt.show()
-
-    plt.plot(eps, lr)
-    plt.title("ETA updates")
     plt.show()
 
 randomQGame()
