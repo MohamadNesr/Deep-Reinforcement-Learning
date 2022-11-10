@@ -85,13 +85,12 @@ def randomQGame():
     plt.xlabel("episodes")
     plt.show()
 
-randomQGame()
+#randomQGame()
 
 def testGame():
     x = []
     y = []
     nb_episodes = 1
-    reward_cumul = 0
     agent = Agent(env.action_space, env.observation_space, 0.01)
     agent.dqn.model.load_state_dict(torch.load("model.pth"))
     agent.dqn.model.eval()
@@ -115,7 +114,6 @@ def testGame():
                 break
 
     env.close()
-    torch.save(agent.dqn.model.state_dict(), "model.pth")
     plt.plot(x, y)
     plt.ylabel("rewards")
     plt.xlabel("episodes")
