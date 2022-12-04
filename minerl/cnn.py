@@ -2,7 +2,7 @@ import torch
 import collections
 import random
 # ------------------- MEMORY REPLAY -------------------------------
-DQNInt = collections.namedtuple('DQNInt', ('state', 'action', 'nextState', 'reward', 'end'))
+CNNInt = collections.namedtuple('CNNInt', ('state', 'action', 'nextState', 'reward', 'end'))
 
 
 class ExperienceReplay:
@@ -16,16 +16,16 @@ class ExperienceReplay:
             # on enleve la premiere interaction
             self.buffer.pop(0)
         # on ajoute la nouvelle interaction
-        self.buffer.append(DQNInt(state, action, nextState, reward, end))
+        self.buffer.append(CNNInt(state, action, nextState, reward, end))
 
     def randomPick(self, size):
         # on tir aleatoirement des interactions distinctes
         return random.sample(self.buffer, size)
 
-# -------------------- DQN -------------------------------------
-class DQN(torch.nn.Module):
+# -------------------- CNN -------------------------------------
+class CNN(torch.nn.Module):
     def __init__(self, num_frames, num_outputs):
-        super(DQN, self).__init__()
+        super(CNN, self).__init__()
         # Network artchitecture
         self.network = nn.Sequential(
             nn.Conv2d(in_channels=num_frames, out_channels=16, kernel_size=5, stride=2),
