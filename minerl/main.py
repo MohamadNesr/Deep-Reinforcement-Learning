@@ -1,21 +1,23 @@
 import gym
 import matplotlib.pyplot as plt
 import torch
+import environment
 
-
+from gym.wrappers.monitoring.video_recorder import VideoRecorder
 from cnn import ExperienceReplay
 from agent import Agent
 import numpy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-env = gym.make('Mineline-v0', render_mode="rgb_array")
-env = gym.wrappers.RecordVideo(env, video_folder="vid")
-env.action_space.seed(42)
+env = gym.make('Mineline-v0')
+#env = VideoRecorder(env, './video')
+#env.action_space.seed(42)
+print(env.action_space)
+print(env.observation_space)
 
 
-
-def randomQGame():
+def train():
     eta = 0.01
     batch_size = 64
     episodes = 300
@@ -28,18 +30,19 @@ def randomQGame():
     interactions = numpy.array([])
 
     for episode in range(episodes):
-        observation, info = env.reset()
+        observation = env.reset()['pov']
+        print(observation)
         reward_cumul = 0
         interactionsEp = 0
         while True:
-            action = agent.act(observation)
-            next_observation, reward, terminated, truncated, info = env.step(action)
+            action = agent.act(numpy.array(observation))
+            next_observation, reward, done, info = env.step(action)
             reward_cumul += reward
             interactionsEp += 1
-            experience.save(observation, action, next_observation, reward, terminated)
+            experience.save(observation, action, next_observation, reward, done)
             observation = next_observation
 
-            if terminated or truncated:
+            if done:
                 rewardEp = numpy.append(rewardEp, reward_cumul)
                 epcount += 1
                 eps = numpy.append(eps, epcount)
@@ -50,9 +53,10 @@ def randomQGame():
             if (batch_size <= len(experience.buffer)):
                 batch = experience.randomPick(batch_size)
                 agent.learn(batch)
+        agent.hard_update()
 
     env.close()
-    torch.save(agent.dqn.model.state_dict(), "model.pth")
+    torch.save(agent.cnn.state_dict(), "model.pth")
 
     plt.plot(eps, rewardEp)
     plt.title("ETA = {}".format(eta) + " batch_size = {}".format(batch_size))
@@ -60,38 +64,4 @@ def randomQGame():
     plt.xlabel("episodes")
     plt.show()
 
-randomQGame()
-
-def testGame():
-    x = []
-    y = []
-    nb_episodes = 1
-    agent = Agent(env.action_space, env.observation_space, 0.01)
-    agent.dqn.model.load_state_dict(torch.load("model.pth"))
-    agent.dqn.model.eval()
-
-    observation, info = env.reset()
-    reward_cumul = 0
-    for _ in range(100):
-        while True:
-            action = agent.act(observation)
-            next_observation, reward, terminated, truncated, info = env.step(action)
-            reward_cumul += reward
-
-            observation = next_observation
-            if terminated or truncated:
-                nb_episodes += 1
-                x.append(nb_episodes)
-                y.append(reward_cumul)
-                print("Reward = {}".format(reward_cumul))
-                reward_cumul = 0
-                observation, info = env.reset()
-                break
-
-    env.close()
-    plt.plot(x, y)
-    plt.ylabel("rewards")
-    plt.xlabel("episodes")
-    plt.show()
-
-testGame()
+train()

@@ -1,6 +1,8 @@
 import torch
+import torch.nn as nn
 import collections
 import random
+
 # ------------------- MEMORY REPLAY -------------------------------
 CNNInt = collections.namedtuple('CNNInt', ('state', 'action', 'nextState', 'reward', 'end'))
 
@@ -27,7 +29,7 @@ class CNN(torch.nn.Module):
     def __init__(self, num_frames, num_outputs):
         super(CNN, self).__init__()
         # Network artchitecture
-        self.network = nn.Sequential(
+        self.model = nn.Sequential(
             nn.Conv2d(in_channels=num_frames, out_channels=16, kernel_size=5, stride=2),
             nn.ReLU(),
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=2),
@@ -41,6 +43,10 @@ class CNN(torch.nn.Module):
             torch.nn.ReLU(),
             nn.Linear(128,num_outputs)
         )
+        self.loss = torch.nn.MSELoss()
+        self.param = torch.nn.ModuleList(self.model.children())
+    
     def forward(self, x):
         # forward propagation
-        return self.network(x)
+        f = self.model(x)
+        return f

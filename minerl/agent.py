@@ -1,7 +1,7 @@
 import cnn 
 import copy
 import math
-
+import numpy as np
 from cnn import CNN
 import random
 import torch
@@ -16,8 +16,8 @@ class Agent:
         self.eta = eta
         self.act_space = act_space
         self.obs_space = obs_space
-        self.cnn = CNN(obs_space.shape[0], act_space.n)
-        self.optimizer = torch.optim.Adam(self.cnn.model.parameters(), lr=self.eta, weight_decay=0.01)
+        self.cnn = CNN(3, len(act_space))
+        self.optimizer = torch.optim.Adam(self.cnn.parameters(), lr=self.eta, weight_decay=0.01)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.epsilon = 1.0
         self.steps = 0
@@ -26,7 +26,7 @@ class Agent:
         self.loss = None
         # evaluate the network
         #self.cnn.model.eval()
-        self.target_net.model.eval()
+        self.target_net.eval()
 
 
     def act(self, observation):
@@ -35,24 +35,25 @@ class Agent:
         # increment steps
         self.steps += 1
         # create observation tensor
-        obs = torch.tensor(observation, dtype=torch.float32, device=self.device)
-
+        ''' obs = torch.tensor(observation.copy(), dtype=torch.float32, device=self.device)
         # with no grad
         with torch.no_grad():
             # get q values for the observation
-            q_values = self.cnn(obs)
+            q_values = self.cnn(obs)'''
 
         # greedy policy
         if random.random() < self.epsilon:
             # random action
             return self.act_space.sample()
         else:
-            # best action
-            return q_values.argmax().item()
+            with torch.no_grad():
+                # best action
+                print(self.cnn(observation))
+                return torch.argmax(self.cnn(observation).item())
 
     def learn(self, batch):
         # train the network
-        self.cnn.model.train()
+        self.cnn.train()
         # create tensors for the batch
         states = torch.tensor([b.state for b in batch], dtype=torch.float32, device=self.device)
         actions = torch.tensor([b.action for b in batch], dtype=torch.int64, device=self.device)
@@ -80,10 +81,10 @@ class Agent:
         # optimize the network and update weights
         self.optimizer.zero_grad()
         loss.backward()
-        for param in self.cnn.model.parameters():
+        for param in self.cnn.parameters():
             param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
-        self.soft_update(0.01)
+       # self.soft_update(0.01)
         #if self.steps % 40 == 0:
         #self.hard_update()
 
