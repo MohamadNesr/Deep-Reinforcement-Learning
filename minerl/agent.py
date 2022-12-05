@@ -6,6 +6,7 @@ from cnn import CNN
 import random
 import torch
 from skimage.color import rgb2gray
+from skimage.transform import resize
 
 EPS_DECAY = 0.995
 EPS_MIN = 0.001
@@ -17,8 +18,8 @@ class Agent:
         self.eta = eta
         self.act_space = act_space
         self.obs_space = obs_space
-        self.im_height = 84
-        self.im_width = 84
+        self.im_height = 224
+        self.im_width = 224
         self.cnn = CNN(1, self.im_height, self.im_width, len(act_space))
         self.optimizer = torch.optim.Adam(self.cnn.parameters(), lr=self.eta, weight_decay=0.01)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,39 +33,39 @@ class Agent:
         # self.cnn.model.eval()
         self.target_net.eval()
 
+    def process_state(self, state):
+        # convert to grayscale
+        state = rgb2gray(state)
+        # resize
+        state = resize(state, (self.im_height, self.im_width), anti_aliasing=True)
+        # normalize
+        state = state.astype(np.float32)
+        state /= 255.0
+        return state
 
-    def rgb2gray(self, obs):
-        state = (
-            resize(rgb2gray(state), (self.im_height,
-                                    self.im_width), mode="reflect")
-            * 255
-        )
-        state = state[np.newaxis, np.newaxis, :, :]
-        return torch.tensor(state, device=device, dtype=torch.float)
-
-
-    def act(self, observation):
+    def act(self, state, reward, done):
+        self.cnn.eval()
         # define epsilon
         self.epsilon = max(self.epsilon * EPS_DECAY, EPS_MIN)
         # increment steps
         self.steps += 1
-        # create observation tensor
-        # obs = torch.tensor(observation.copy(), dtype=torch.float32, device=self.device)
-        #obs = torch.from_numpy(observation.copy()).unsqueeze(0).to(self.device)
-        # with no grad
+        #state = self.process_state(state)
+        print(state.shape)
+        input = torch.from_numpy(state).unsqueeze(0).unsqueeze(0).to(self.device)
+        print(input.shape)
+        # get q values for the state
         with torch.no_grad():
-            # get q values for the observation
-            q_values = self.cnn(observation)
-           
-        # greedy policy
+            q_values = self.cnn(input)
+        # get the action
         if random.random() < self.epsilon:
-            # random action
-            return self.act_space.sample()
+            action = random.choice(self.act_space)
         else:
-            with torch.no_grad():
-                # best action
-                #print(self.cnn(observation))
-                return torch.argmax(q_values.item())
+            action = self.act_space[q_values.argmax().item()]
+
+        self.cnn.train()
+
+        return action
+
 
     def learn(self, batch):
         # train the network

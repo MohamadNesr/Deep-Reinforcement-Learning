@@ -19,55 +19,49 @@ print(env.observation_space)
 
 
 def train():
-    eta = 0.01
-    batch_size = 64
-    episodes = 300
+    # define hyperparameters
+    num_episodes = 100
+    batch_size = 32
+    eta = 0.001
+    # create agent
     agent = Agent(env.action_space, env.observation_space, eta)
-    experience = ExperienceReplay()
-
-    rewardEp = numpy.array([])
-    eps = numpy.array([])
-    epcount = 0
-    interactions = numpy.array([])
-
-    for episode in range(episodes):
-        observation = env.reset()['pov']
-        state = agent.rgb2gray(observation)
-        print(observation)
-        print(observation.shape)
-        obs = torch.from_numpy(observation.copy()).unsqueeze(0).to(device)
-        torch.permute(obs, (0,3,1,2)).size()
-        print(obs.shape)
-        reward_cumul = 0
-        interactionsEp = 0
-        while True:
-            action = agent.act(state)
-            next_observation, reward, done, info = env.step(action)
-            reward_cumul += reward
-            interactionsEp += 1
-            experience.save(obs, action, next_observation, reward, done)
-            observation = next_observation
-
-            if done:
-                rewardEp = numpy.append(rewardEp, reward_cumul)
-                epcount += 1
-                eps = numpy.append(eps, epcount)
-                interactions = numpy.append(interactions, interactionsEp)
-                print("Episode {} : reward = {}, epsilon = {}, eta = {}, loss = {}".format(episode, reward_cumul, agent.epsilon, agent.eta, agent.loss))
-                break
-
-            if (batch_size <= len(experience.buffer)):
-                batch = experience.randomPick(batch_size)
-                agent.learn(batch)
-        agent.hard_update()
-
-    env.close()
-    torch.save(agent.cnn.state_dict(), "model.pth")
-
-    plt.plot(eps, rewardEp)
-    plt.title("ETA = {}".format(eta) + " batch_size = {}".format(batch_size))
-    plt.ylabel("rewards")
-    plt.xlabel("episodes")
-    plt.show()
+    # create experience replay
+    exp_replay = ExperienceReplay()
+    # initialize lists
+    rewards = []
+    losses = []
+    # iterate over episodes
+    for i in range(num_episodes):
+        # reset environment
+        state = agent.process_state(env.reset()['pov'])
+        done = False
+        total_reward = 0
+        # iterate over steps
+        while not done:
+            # act
+            action = agent.act(state, 0, done)
+            # step
+            next_state, reward, done, _ = env.step(action)
+            # save experience
+            exp_replay.save(state, action, next_state, reward, done)
+            # update state
+            state = next_state
+            # update total reward
+            total_reward += reward
+        # sample batch
+        batch = exp_replay.randomPick(batch_size)
+        # learn
+        agent.learn(batch)
+        # update lists
+        rewards.append(total_reward)
+        losses.append(agent.loss)
+        # print
+        print('Episode: {}, Reward: {}, Loss: {}'.format(i, total_reward, agent.loss))
+        # plot
+        plt.plot(rewards)
+        plt.plot(losses)
+        plt.show()
+        # save model
+        torch.save(agent.cnn.state_dict(), 'model.pth')
 
 train()
