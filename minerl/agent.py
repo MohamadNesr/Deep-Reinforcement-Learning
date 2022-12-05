@@ -5,6 +5,7 @@ import numpy as np
 from cnn import CNN
 import random
 import torch
+from skimage.color import rgb2gray
 
 EPS_DECAY = 0.995
 EPS_MIN = 0.001
@@ -16,7 +17,9 @@ class Agent:
         self.eta = eta
         self.act_space = act_space
         self.obs_space = obs_space
-        self.cnn = CNN(3, len(act_space))
+        self.im_height = 84
+        self.im_width = 84
+        self.cnn = CNN(1, self.im_height, self.im_width, len(act_space))
         self.optimizer = torch.optim.Adam(self.cnn.parameters(), lr=self.eta, weight_decay=0.01)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.epsilon = 1.0
@@ -24,9 +27,20 @@ class Agent:
         self.gamma = 0.999
         self.target_net = copy.deepcopy(self.cnn)
         self.loss = None
+        
         # evaluate the network
-        #self.cnn.model.eval()
+        # self.cnn.model.eval()
         self.target_net.eval()
+
+
+    def rgb2gray(self, obs):
+        state = (
+            resize(rgb2gray(state), (self.im_height,
+                                    self.im_width), mode="reflect")
+            * 255
+        )
+        state = state[np.newaxis, np.newaxis, :, :]
+        return torch.tensor(state, device=device, dtype=torch.float)
 
 
     def act(self, observation):
@@ -35,12 +49,13 @@ class Agent:
         # increment steps
         self.steps += 1
         # create observation tensor
-        ''' obs = torch.tensor(observation.copy(), dtype=torch.float32, device=self.device)
+        # obs = torch.tensor(observation.copy(), dtype=torch.float32, device=self.device)
+        #obs = torch.from_numpy(observation.copy()).unsqueeze(0).to(self.device)
         # with no grad
         with torch.no_grad():
             # get q values for the observation
-            q_values = self.cnn(obs)'''
-
+            q_values = self.cnn(observation)
+           
         # greedy policy
         if random.random() < self.epsilon:
             # random action
@@ -48,8 +63,8 @@ class Agent:
         else:
             with torch.no_grad():
                 # best action
-                print(self.cnn(observation))
-                return torch.argmax(self.cnn(observation).item())
+                #print(self.cnn(observation))
+                return torch.argmax(q_values.item())
 
     def learn(self, batch):
         # train the network

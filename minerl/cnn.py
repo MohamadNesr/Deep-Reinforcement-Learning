@@ -26,7 +26,7 @@ class ExperienceReplay:
 
 # -------------------- CNN -------------------------------------
 class CNN(torch.nn.Module):
-    def __init__(self, num_frames, num_outputs):
+    def __init__(self, num_frames, h, w, num_outputs):
         super(CNN, self).__init__()
         # Network artchitecture
         self.model = nn.Sequential(

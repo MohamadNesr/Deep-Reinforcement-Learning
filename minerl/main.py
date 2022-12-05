@@ -8,6 +8,7 @@ from cnn import ExperienceReplay
 from agent import Agent
 import numpy
 
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 env = gym.make('Mineline-v0')
@@ -31,15 +32,20 @@ def train():
 
     for episode in range(episodes):
         observation = env.reset()['pov']
+        state = agent.rgb2gray(observation)
         print(observation)
+        print(observation.shape)
+        obs = torch.from_numpy(observation.copy()).unsqueeze(0).to(device)
+        torch.permute(obs, (0,3,1,2)).size()
+        print(obs.shape)
         reward_cumul = 0
         interactionsEp = 0
         while True:
-            action = agent.act(numpy.array(observation))
+            action = agent.act(state)
             next_observation, reward, done, info = env.step(action)
             reward_cumul += reward
             interactionsEp += 1
-            experience.save(observation, action, next_observation, reward, done)
+            experience.save(obs, action, next_observation, reward, done)
             observation = next_observation
 
             if done:
