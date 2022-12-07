@@ -9,7 +9,7 @@ from skimage.color import rgb2gray
 from skimage.transform import resize
 
 EPS_DECAY = 0.995
-EPS_MIN = 0.001
+EPS_MIN = 0.4
 ETA_MIN = 0.0000001
 ETA_DECAY = 0.175
 action_keys = ["attack", "left", "right"]
@@ -50,7 +50,7 @@ class Agent:
         self.epsilon = max(self.epsilon * EPS_DECAY, EPS_MIN)
         # increment steps
         self.steps += 1
-        #state = self.process_state(state)
+        # state = self.process_state(state)
         #print(state.shape)
         #input = torch.from_numpy(state).unsqueeze(0).unsqueeze(0).to(self.device)
         #print(input.shape)
@@ -61,21 +61,32 @@ class Agent:
         # act_array = [act[action_key] for action_key in action_keys]
         # get the action
         action = self.act_space.noop()
-        action = dict(action)
         # action['camera'] = 0,0
         if random.random() < self.epsilon:
-            action = self.act_space.sample()
-            action = dict.fromkeys(action, 0)
+            # choose random action
+            action = dict(action)
             a = "random"
+            action['attack'] = random.randint(0, 1)
+            if (action['attack'] == 1):
+                action['left'] = 0
+                action['right'] = 0
+            else:
+                action['left'] = random.randint(0, 1)
+                if (action['left'] == 1):
+                    action['right'] = 0
+                else:
+                    action['right'] = random.randint(0, 1)
+
             return action, a
         else:
             q_values = self.cnn(state)
-            q_values = q_values.cpu().detach().numpy()
-            act_number = np.argmax(q_values)
-            act = dict.fromkeys(action_keys, 0)
-            act[action_keys[act_number]]=1      
+            q_values = torch.tensor([q_values.argmax()])
+            act = action_keys[q_values]    
             a = "best"     
-            action = act
+            print(act)   
+            #action = act
+            action = dict(action)
+            action[act] = 1
             return action, a
 
 
@@ -111,15 +122,15 @@ class Agent:
         #print(dones)
         #print("--------------------------------------------------------------------------------")
         
-        predictions = self.cnn(states)
-        predictions = predictions.gather(1, actions)
-        predictions = torch.max(predictions, 1)[0]
+        target = self.cnn(states)
+        target = target.gather(1, actions)
+        target = torch.max(target, 1)[0]
         with torch.no_grad():
-            next_predictions = self.target_net(next_states)
+            next_target = self.target_net(next_states)
         
         self.cnn.train()
-        targets = rewards + self.gamma * torch.max(next_predictions, 1)[0] * (1 - dones)
-        loss = self.cnn.loss(predictions, targets)
+        targets = rewards + self.gamma * torch.max(next_target, 1)[0] * (1 - dones)
+        loss = self.cnn.loss(target, targets)
         self.loss = loss.item()
         self.optimizer.zero_grad()
         loss.backward()
