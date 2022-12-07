@@ -32,25 +32,27 @@ class CNN(torch.nn.Module):
         super(CNN, self).__init__() 
         input_width, input_height, input_channels = input_size
         self.layer1 = nn.Sequential(
-            nn.Conv2d(input_channels, 10, (7, 7), stride = 7),
-            nn.ReLU()
+            nn.Conv2d(input_channels, 16, kernel_size = 8, stride = 4),
+            nn.ReLU(),
+            nn.MaxPool2d(2, stride = 2)
         )
         self.layer2 = nn.Sequential(
-            nn.Conv2d(10, 5, (2, 2), stride=2),
+            nn.Conv2d(16, 32, kernel_size = 4, stride=2),
             nn.ReLU(),
-            nn.MaxPool2d((2,2), stride=2)
+            nn.AdaptiveAvgPool2d(7),
+            nn.Flatten()
         )
-        self.layer3 = nn.Sequential(
+        '''self.layer3 = nn.Sequential(
             nn.Conv2d(5, 1, (2, 2), stride=2, padding = 1),
             nn.ReLU(),
             nn.Flatten()
-        )
+        )'''
         self.layer4 = nn.Sequential(
-            nn.Linear(25, 16),
+            nn.Linear(7*7*32, 128),
             nn.ReLU())
             
         self.layer5 = nn.Sequential(
-            nn.Linear(16, output_size),
+            nn.Linear(128, output_size),
             nn.ReLU())
 
         self.loss = torch.nn.MSELoss()
@@ -68,9 +70,8 @@ class CNN(torch.nn.Module):
         x = torch.swapaxes(x, 2, 3)
         x1 = self.layer1(x.float())
         x2 = self.layer2(x1)
-        x3 = self.layer3(x2) 
-        x4 = self.layer4(x3)
+        #x3 = self.layer3(x2) 
+        x4 = self.layer4(x2)
         x5 = self.layer5(x4)
 
         return x5
-    

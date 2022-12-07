@@ -56,7 +56,7 @@ class Agent:
         #print(input.shape)
         # get q values for the state
         #with torch.no_grad():
-            
+        a = "none"
 
         # act_array = [act[action_key] for action_key in action_keys]
         # get the action
@@ -66,19 +66,18 @@ class Agent:
         if random.random() < self.epsilon:
             action = self.act_space.sample()
             action = dict.fromkeys(action, 0)
-            #print("random action")
-            #print(action)
+            a = "random"
+            return action, a
         else:
             q_values = self.cnn(state)
             q_values = q_values.cpu().detach().numpy()
             act_number = np.argmax(q_values)
             act = dict.fromkeys(action_keys, 0)
-            act[action_keys[act_number]]=1           
-            # act['camera'] = 0,0
-            #print("best action")
-            #print(act)
+            act[action_keys[act_number]]=1      
+            a = "best"     
             action = act
-        return action
+            return action, a
+
 
 
     def learn(self, batch_size, exp_replay):
@@ -137,3 +136,4 @@ class Agent:
 
     def hard_update(self):
         self.target_net.load_state_dict(self.cnn.state_dict())
+
