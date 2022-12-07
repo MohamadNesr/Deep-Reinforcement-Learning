@@ -40,7 +40,7 @@ def randomGame():
 
 #randomGame()
 
-def randomQGame():
+def train():
     eta = 0.01
     batch_size = 128
     episodes = 300
@@ -85,7 +85,7 @@ def randomQGame():
     plt.xlabel("episodes")
     plt.show()
 
-randomQGame()
+train()
 
 def testGame():
     x = []
