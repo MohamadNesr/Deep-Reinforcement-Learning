@@ -12,6 +12,7 @@ EPS_DECAY = 0.995
 EPS_MIN = 0.001
 ETA_MIN = 0.0000001
 ETA_DECAY = 0.175
+action_keys = ["attack", "left", "right"]
 
 class Agent:
     def __init__(self, act_space, obs_space, eta):
@@ -20,14 +21,14 @@ class Agent:
         self.obs_space = obs_space
         self.im_height = 224
         self.im_width = 224
-        self.cnn = CNN(1, self.im_height, self.im_width, len(act_space))
+        self.cnn = CNN(obs_space['pov'].shape , len(act_space))
         self.optimizer = torch.optim.Adam(self.cnn.parameters(), lr=self.eta, weight_decay=0.01)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.epsilon = 1.0
         self.steps = 0
         self.gamma = 0.999
         self.target_net = copy.deepcopy(self.cnn)
-        self.loss = None
+        self.loss = 0
         
         # evaluate the network
         # self.cnn.model.eval()
@@ -50,59 +51,85 @@ class Agent:
         # increment steps
         self.steps += 1
         #state = self.process_state(state)
-        print(state.shape)
-        input = torch.from_numpy(state).unsqueeze(0).unsqueeze(0).to(self.device)
-        print(input.shape)
+        #print(state.shape)
+        #input = torch.from_numpy(state).unsqueeze(0).unsqueeze(0).to(self.device)
+        #print(input.shape)
         # get q values for the state
-        with torch.no_grad():
-            q_values = self.cnn(input)
+        #with torch.no_grad():
+            
+
+        # act_array = [act[action_key] for action_key in action_keys]
         # get the action
+        action = self.act_space.noop()
+        action = dict(action)
+        # action['camera'] = 0,0
         if random.random() < self.epsilon:
-            action = random.choice(self.act_space)
+            action = self.act_space.sample()
+            action = dict.fromkeys(action, 0)
+            #print("random action")
+            #print(action)
         else:
-            action = self.act_space[q_values.argmax().item()]
-
-        self.cnn.train()
-
+            q_values = self.cnn(state)
+            q_values = q_values.cpu().detach().numpy()
+            act_number = np.argmax(q_values)
+            act = dict.fromkeys(action_keys, 0)
+            act[action_keys[act_number]]=1           
+            # act['camera'] = 0,0
+            #print("best action")
+            #print(act)
+            action = act
         return action
 
 
-    def learn(self, batch):
-        # train the network
+    def learn(self, batch_size, exp_replay):
+        # get batch
+        batch = exp_replay.randomPick(batch_size)
+        # prepare batch
+        states = torch.stack([torch.tensor(state) for state in batch[0]])
+        #print("states tensor built")
+        #print(states.shape)
+        #print(batch[1])
+        #print("--------------------------------------------------------------------------------")
+        tensors = [torch.tensor(list(v.values())) for v in batch[1]]
+        actions = torch.stack(tensors)
+        #print("actions tensor built")
+        #print(actions.shape)
+        #print(actions)
+        #print("--------------------------------------------------------------------------------")
+        next_states = torch.stack([torch.tensor(next_state) for next_state in batch[2]])
+        #print("next_states tensor built")
+        #print(next_states.shape)
+        #print(next_states)
+        #print("--------------------------------------------------------------------------------")
+        rewards = torch.stack([torch.tensor(reward, dtype=None) for reward in batch[3]])
+        #print("rewards tensor built")
+        #print(rewards.shape)
+        #print(rewards)
+        #print("--------------------------------------------------------------------------------")
+        dones = torch.stack([torch.tensor(done, dtype=torch.float32) for done in batch[4]])
+        #print("dones tensor built")
+        #print(dones.shape)
+        #print(dones)
+        #print("--------------------------------------------------------------------------------")
+        
+        predictions = self.cnn(states)
+        predictions = predictions.gather(1, actions)
+        predictions = torch.max(predictions, 1)[0]
+        with torch.no_grad():
+            next_predictions = self.target_net(next_states)
+        
         self.cnn.train()
-        # create tensors for the batch
-        states = torch.tensor([b.state for b in batch], dtype=torch.float32, device=self.device)
-        actions = torch.tensor([b.action for b in batch], dtype=torch.int64, device=self.device)
-        rewards = torch.tensor([b.reward for b in batch], dtype=torch.float32, device=self.device)
-        next_states = torch.tensor([b.nextState for b in batch], dtype=torch.float32, device=self.device)
-        ends = torch.tensor([b.end for b in batch], dtype=torch.float32, device=self.device)
-
-        # loss function
-        loss_fn = torch.nn.MSELoss()
-
-        # get q values for the states
-        q_values = self.cnn(states)
-        q_values = q_values.gather(1, actions.unsqueeze(-1)).squeeze(-1)
-
-        # get q values for the next states
-        next_q_values = self.target_net(next_states)
-        next_q_values = next_q_values.detach().max(1)[0]
-
-        # Bellman's equation
-        targets = rewards + self.gamma * next_q_values * (1 - ends)
-
-        # compute the loss
-        loss = loss_fn(q_values, targets)
+        targets = rewards + self.gamma * torch.max(next_predictions, 1)[0] * (1 - dones)
+        loss = self.cnn.loss(predictions, targets)
         self.loss = loss.item()
-        # optimize the network and update weights
         self.optimizer.zero_grad()
         loss.backward()
-        for param in self.cnn.parameters():
-            param.grad.data.clamp_(-1, 1)
+        for p in self.cnn.parameters():
+            p.grad.data.clamp_(-1, 1)
         self.optimizer.step()
-       # self.soft_update(0.01)
-        #if self.steps % 40 == 0:
-        #self.hard_update()
+        # update target network
+        self.soft_update(0.01)
+        #print("learned")
 
     def soft_update(self, tau):
         for target_param, param in zip(self.target_net.parameters(), self.cnn.parameters()):

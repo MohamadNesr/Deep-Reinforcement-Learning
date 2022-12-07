@@ -22,31 +22,55 @@ class ExperienceReplay:
 
     def randomPick(self, size):
         # on tir aleatoirement des interactions distinctes
-        return random.sample(self.buffer, size)
+        randomPick = random.sample(self.buffer, size)
+        # on retourne les tenseurs
+        return CNNInt(*zip(*randomPick))
 
 # -------------------- CNN -------------------------------------
 class CNN(torch.nn.Module):
-    def __init__(self, num_frames, h, w, num_outputs):
-        super(CNN, self).__init__()
-        # Network artchitecture
-        self.model = nn.Sequential(
-            nn.Conv2d(in_channels=num_frames, out_channels=16, kernel_size=5, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5, stride=2),
-            torch.nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=32, out_channels=32, kernel_size=5, stride=2),
-            torch.nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(7*7*64,128),
-            torch.nn.ReLU(),
-            nn.Linear(128,num_outputs)
+    def __init__(self, input_size, output_size):
+        super(CNN, self).__init__() 
+        input_width, input_height, input_channels = input_size
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(input_channels, 10, (7, 7), stride = 7),
+            nn.ReLU()
         )
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(10, 5, (2, 2), stride=2),
+            nn.ReLU(),
+            nn.MaxPool2d((2,2), stride=2)
+        )
+        self.layer3 = nn.Sequential(
+            nn.Conv2d(5, 1, (2, 2), stride=2, padding = 1),
+            nn.ReLU(),
+            nn.Flatten()
+        )
+        self.layer4 = nn.Sequential(
+            nn.Linear(25, 16),
+            nn.ReLU())
+            
+        self.layer5 = nn.Sequential(
+            nn.Linear(16, output_size),
+            nn.ReLU())
+
         self.loss = torch.nn.MSELoss()
-        self.param = torch.nn.ModuleList(self.model.children())
-    
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
+
+    #Utilisation du DQN
     def forward(self, x):
-        # forward propagation
-        f = self.model(x)
-        return f
+        x = torch.tensor(x)
+        #print(x.shape) 
+
+
+        if(x.dim()==3):
+            x = x[None, :]
+        x = torch.swapaxes(x, 1, 3)
+        x = torch.swapaxes(x, 2, 3)
+        x1 = self.layer1(x.float())
+        x2 = self.layer2(x1)
+        x3 = self.layer3(x2) 
+        x4 = self.layer4(x3)
+        x5 = self.layer5(x4)
+
+        return x5
+    
