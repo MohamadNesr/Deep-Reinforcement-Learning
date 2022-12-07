@@ -85,7 +85,7 @@ def train():
     plt.xlabel("episodes")
     plt.show()
 
-train()
+#train()
 
 def testGame():
     x = []
