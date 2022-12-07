@@ -38,7 +38,7 @@ def randomGame():
     plt.xlabel("episodes")
     plt.show()
 
-# randomGame()
+#randomGame()
 
 def randomQGame():
     eta = 0.01
@@ -85,7 +85,7 @@ def randomQGame():
     plt.xlabel("episodes")
     plt.show()
 
-#randomQGame()
+randomQGame()
 
 def testGame():
     x = []
