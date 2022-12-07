@@ -256,3 +256,5 @@ cython_debug/
 /vid/
 /minerl/__pycache__/
 /minerl/logs/
+/minerl/videos/
+/minerl/*.jpg
