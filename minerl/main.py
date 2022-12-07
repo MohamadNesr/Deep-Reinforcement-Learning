@@ -17,7 +17,7 @@ video_recorder = VideoRecorder(env, './minerl/videos/video.mp4')
 #env.action_space.seed(42)
 #print(env.action_space)
 #print(env.observation_space)
-stateervation = env.reset()
+observation = env.reset()
 action_keys = ["attack", "left", "right"]
 input_size = env.observation_space['pov'].shape   #taille de l'input de notre réseau
 output_size = len(action_keys)    #taille de sortie
@@ -26,7 +26,7 @@ model = CNN(input_size, output_size)
 # create experience replay
 exp_replay = ExperienceReplay()
 # define hyperparameters
-num_episodes = 2
+num_episodes = 100
 batch_size = 64
 eta = 0.001
 # create agent
@@ -60,6 +60,7 @@ def train():
             exp_replay.save(state, action, next_state, reward, done)
             # update state
             state = next_state
+            print("state updated")
             # update total reward
             total_reward += reward
             # update episode counter
