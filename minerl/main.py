@@ -28,7 +28,7 @@ exp_replay = ExperienceReplay()
 # define hyperparameters
 num_episodes = 100
 batch_size = 64
-eta = 0.001
+eta = 0.01
 # create agent
 agent = Agent(env.action_space, env.observation_space, eta)
 
@@ -50,9 +50,9 @@ def train():
         # iterate over steps
         while not done:
             # act
-            action,a = agent.act(state, 0, done)
-            print(a)
-            print(action)
+            action,a = agent.act(state)
+            #print(a)
+            #print(action)
             # step
             next_state, reward, done, _ = env.step(action)
             next_state = torch.tensor(next_state['pov'].copy())
@@ -60,7 +60,7 @@ def train():
             exp_replay.save(state, action, next_state, reward, done)
             # update state
             state = next_state
-            print("state updated")
+            #print("state updated")
             # update total reward
             total_reward += reward
             # update episode counter
@@ -88,18 +88,19 @@ def test():
     # load model
     agent.cnn.load_state_dict(torch.load('minerl-model.pth'))
     # reset environment
-    state = env.reset()
-    state = torch.tensor(state['pov'].copy())
-    done = False
-    total_reward = 0
+    
     nb_eps = []
     rewards = []
     # create episodes:
     for i in range(10):
+        state = env.reset()
+        state = torch.tensor(state['pov'].copy())
+        done = False
+        total_reward = 0
         # iterate over steps
         while not done:
             # act
-            action,a = agent.act(state, 0, done)
+            action,a = agent.act(state)
             # step
             next_state, reward, done, _ = env.step(action)
             # update state
