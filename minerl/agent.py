@@ -8,8 +8,8 @@ import torch
 from skimage.color import rgb2gray
 from skimage.transform import resize
 
-EPS_DECAY = 0.995
-EPS_MIN = 0.4
+EPS_DECAY = 0.99995
+EPS_MIN = 0.1
 ETA_MIN = 0.0000001
 ETA_DECAY = 0.175
 action_keys = ["attack", "left", "right"]
@@ -44,7 +44,7 @@ class Agent:
         state /= 255.0
         return state
 
-    def act(self, state, reward, done):
+    def act(self, state):
         self.cnn.eval()
         # define epsilon
         self.epsilon = max(self.epsilon * EPS_DECAY, EPS_MIN)
@@ -75,7 +75,7 @@ class Agent:
                 if (action['left'] == 1):
                     action['right'] = 0
                 else:
-                    action['right'] = random.randint(0, 1)
+                    action['right'] = 1
 
             return action, a
         else:
@@ -83,7 +83,7 @@ class Agent:
             q_values = torch.tensor([q_values.argmax()])
             act = action_keys[q_values]    
             a = "best"     
-            print(act)   
+            #print(act)   
             #action = act
             action = dict(action)
             action[act] = 1
@@ -147,4 +147,5 @@ class Agent:
 
     def hard_update(self):
         self.target_net.load_state_dict(self.cnn.state_dict())
+
 
