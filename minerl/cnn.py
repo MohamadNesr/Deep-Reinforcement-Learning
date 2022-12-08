@@ -32,7 +32,7 @@ class CNN(torch.nn.Module):
         super(CNN, self).__init__() 
         input_width, input_height, input_channels = input_size
         self.layer1 = nn.Sequential(
-            nn.Conv2d(input_channels, 16, kernel_size = 8, stride = 4),
+            nn.Conv2d(input_channels, 16, kernel_size = 6, stride = 1),
             nn.ReLU(),
             nn.MaxPool2d(2, stride = 2)
         )
@@ -56,7 +56,7 @@ class CNN(torch.nn.Module):
             nn.ReLU())
 
         self.loss = torch.nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=0.001)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=0.1)
 
     #Utilisation du DQN
     def forward(self, x):
